@@ -464,7 +464,7 @@ footer{margin-top:28px;text-align:center;font-size:12.5px;color:var(--ink-faint)
 .col .warnmk,.warnmk{color:#b7791f;font-size:.85em;margin-left:3px}
 .mockbar2{background:#eef2ed;color:#3f5a44;font-size:13px;padding:9px 18px;text-align:center;border-bottom:1px solid #d8e2d5}
 .mockbar2 b{color:#2f4a34}
-.vs-card .img{height:210px}
+@media (min-width:641px){.vs-card .img{height:210px}}
 .vs-card .wd{font-size:14px}
 .facts{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
 .facts span{font-size:12px;border-radius:10px;padding:3px 9px;background:#f3f1ea;color:#454b47;line-height:1.5}
@@ -482,6 +482,23 @@ footer{margin-top:28px;text-align:center;font-size:12.5px;color:var(--ink-faint)
 .skipboth{font:inherit;font-size:13.5px;padding:10px 18px;border-radius:22px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;transition:border-color .2s,color .2s,transform .2s}
 .skipboth:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
 .cand .season{top:84px;right:auto;left:8px}
+/* 폰: 두 꽃을 나란히 — 한 화면에서 비교(코덱스 30차) */
+@media (max-width:640px){
+  .versus{grid-template-columns:1fr 18px 1fr;gap:0;align-items:stretch}
+  .vs-mark{align-self:center;font-size:10.5px;padding:0;letter-spacing:0}
+  .vs-card .img{height:118px}
+  .vs-card .in{padding:10px 11px 12px}
+  .vs-card .nm{font-size:15.5px;line-height:1.35}
+  .vs-card .wd{font-size:12.5px;margin-top:2px;line-height:1.45}
+  .vs-card .badge{top:6px;left:6px}
+  .vs-card .season{top:92px;right:auto;left:6px;font-size:10px}
+  .facts{gap:4px;margin-top:7px}
+  .facts span{font-size:11px;padding:2px 7px;line-height:1.45}
+  .cols2{margin-top:7px;gap:4px;flex-wrap:wrap}
+  .cols2 em{display:none}
+  .cols2 i{width:13px;height:13px}
+  .skipwrap{margin-top:12px}
+}
 #creditsbody a{white-space:nowrap}
 </style>
 </head>
@@ -1066,7 +1083,7 @@ function careKey(f){
   if(CARE_FIX[f.s]) return CARE_FIX[f.s];
   const m=f.care.match(/<b>(.*?)<\/b>/); return m?m[1]:f.care.replace(/<[^>]+>/g,'');
 }
-function careWarn(t){ return /조심|약해|약하|시들|떨어|무릅|가루|휘어|자라|안 필|져요|요청|진해|호불호/.test(t); }
+function careWarn(t){ if(/안 시들/.test(t)) return false; return /조심|약해|약하|시들|떨어|무릅|물러|가루|휘어|자라|안 필|져요|요청|진해|호불호|꺾여|상하|상해|독성|가시|뾰족|냄새|갈변|짧아|가늘/.test(t); }
 const MATERIAL={ruscus:'잎 소재',eucalyptus:'잎 소재',hypericum:'열매 소재',brunia:'열매 같은 소재'};
 function matTag(f){ return MATERIAL[f.s]?`<span class="mat">${MATERIAL[f.s]}</span>`:''; }
 function multiBloom(f){ return /한 대에 여러 송이/.test(f.size)?'<span>한 대에 여러 송이</span>':''; }
