@@ -462,6 +462,27 @@ footer{margin-top:28px;text-align:center;font-size:12.5px;color:var(--ink-faint)
   .petal{display:none}
 }
 .col .warnmk,.warnmk{color:#b7791f;font-size:.85em;margin-left:3px}
+.mockbar2{background:#eef2ed;color:#3f5a44;font-size:13px;padding:9px 18px;text-align:center;border-bottom:1px solid #d8e2d5}
+.mockbar2 b{color:#2f4a34}
+.vs-card .img{height:210px}
+.vs-card .wd{font-size:14px}
+.facts{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.facts span{font-size:12px;border-radius:10px;padding:3px 9px;background:#f3f1ea;color:#454b47;line-height:1.5}
+.facts .cg{background:#eef2ed;color:#3f5a44}
+.facts .cw{background:#fdf6e7;color:#8a6420}
+.facts .mat{background:#eef0f7;color:#4b5a7a;font-weight:600}
+.cols2{display:flex;align-items:center;gap:6px;margin-top:9px}
+.cols2 em{font-style:normal;font-size:11.5px;color:var(--ink-faint);margin-right:2px}
+.cols2 i{width:15px;height:15px;border-radius:8px;border:1px solid rgba(0,0,0,.12);display:inline-block}
+.cols2 i.w{opacity:.35}
+.cols2.sm{margin-top:5px;gap:4px}.cols2.sm i{width:11px;height:11px}
+.mt2{margin-top:4px;font-size:11.5px;color:var(--ink-faint)}
+.cand .img{height:110px}
+.skipwrap{text-align:center;margin-top:14px}
+.skipboth{font:inherit;font-size:13.5px;padding:10px 18px;border-radius:22px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;transition:border-color .2s,color .2s,transform .2s}
+.skipboth:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.cand .season{top:84px;right:auto;left:8px}
+#creditsbody a{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -522,7 +543,8 @@ footer{margin-top:28px;text-align:center;font-size:12.5px;color:var(--ink-faint)
       <span class="tr-dots" id="trdots"></span>
     </div>
     <div class="versus" id="versus"></div>
-    <div class="tr-esc">둘 다 안 끌리시면 <b id="tolist">목록에서 직접 고르기 →</b></div>
+    <div class="skipwrap"><button type="button" class="skipboth" id="skipboth">둘 다 안 끌려요 · 다른 꽃 보기</button></div>
+    <div class="tr-esc">목록으로 한눈에 보고 싶으시면 <b id="tolist">목록에서 직접 고르기 →</b></div>
   </div>
 
   <div id="listmode" hidden>
@@ -774,8 +796,7 @@ $('s1').classList.add('in');
   const ks=Object.keys(CREDITS);
   if(!ks.length){ $('credits').hidden=true; return; }
   $('creditsbody').innerHTML=
-    `이 페이지의 꽃 사진은 <b>위키미디어 공용</b>에서 가져왔어요. 저작자와 이용 조건을 아래에 밝힙니다.
-     (maydly가 직접 촬영한 사진으로 차차 바꿔갈 예정이에요.)
+    `이 페이지의 꽃 사진은 <b>꽃집에서 살 때의 모습</b>을 담은, 누구나 쓸 수 있는 사용 허락(CC·퍼블릭 도메인) 사진이에요. 꽃이 잘 보이게 가운데를 잘라 쓰고, 아주 어두운 사진은 밝기를 조금 맞췄어요. 저작자와 이용 조건을 아래에 밝힙니다.
      <ul>`+ks.map(k=>{
        const c=CREDITS[k];
        const lic=c.licenseUrl?`<a href="${c.licenseUrl}" target="_blank" rel="noopener">${c.license}</a>`:c.license;
@@ -896,7 +917,7 @@ function baseList(){
   const by = S.by==='color'
     ? FLOWERS.filter(f=>f.colors.some(c=>S.cgroup.names.includes(c[0])))
     : FLOWERS.filter(f=>f.moods.includes(S.mood.id));
-  return by.filter(fitsForm);
+  return by.filter(fitsForm).filter(f=>HASPHOTO.has(f.s));
 }
 function poolFor(){ return baseList().filter(inSeason); }
 function criterionText(){ return S.by==='color' ? `${S.cgroup.label} 계열` : '이 마음'; }
@@ -917,6 +938,7 @@ function startTournament(pool){
   T.size=size;
   T.pool=shuffle(pool).slice(0,size);
   T.round=T.pool.slice(); T.next=[]; T.idx=0;
+  T.reserve=shuffle(pool.filter(f=>!T.pool.includes(f))); T.skipped=[];
   $('c2').classList.remove('in'); $('pdwrap').classList.remove('open');
   const extra=pool.length-size;
   $('d2').innerHTML=`${criterionText()}에 맞는 <b>${pool.length}가지</b> 중에서 `+
@@ -927,12 +949,21 @@ function startTournament(pool){
 }
 
 function roundName(n){
-  return n===16?'16강':n===8?'8강':n===4?'4강':n===2?'결승':'';
+  return n>8?'16강':n>4?'8강':n>2?'4강':'결승';
+}
+function nextMatchOrRound(){
+  if(T.idx<T.round.length-1){ renderMatch(); return; }
+  if(T.idx===T.round.length-1){ T.next.push(T.round[T.idx]); }   /* 짝 없이 남은 꽃은 그냥 올라감 */
+  if(T.next.length===0){ toast('다 빼셨어요. 목록에서 한눈에 보세요'); $('tolist').click(); return; }
+  if(T.next.length===1){ finishTournament(T.next[0]); return; }
+  const prev=T.round.length;
+  T.round=T.next; T.next=[]; T.idx=0;
+  banner(`${roundName(prev)} 끝`, `${roundName(T.round.length)} 진출`, renderMatch);
 }
 
 function renderMatch(){
   const a=T.round[T.idx], b=T.round[T.idx+1];
-  const total=T.round.length/2, cur=T.idx/2+1;
+  const total=Math.floor(T.round.length/2), cur=Math.floor(T.idx/2)+1;
   $('trround').innerHTML=`${roundName(T.round.length)}`+
     (T.round.length>2?`<span>${cur}경기 / ${total}경기</span>`:`<span>마지막이에요</span>`);
   $('trdots').innerHTML=Array.from({length:total},(_,i)=>
@@ -949,9 +980,9 @@ function card(f,enc){
   return `<div class="vs-card ${enc}" data-s="${f.s}">
     <span class="badge tg t${f.tier}">${TIER_LABEL[f.tier]}</span>
     ${freshNow(f)?'':'<span class="season">지금은 조화·드라이로</span>'}
-    <div class="img"><img src="img/${f.s}.jpg" alt="${f.n}"></div>
-    <div class="in"><div class="nm">${f.n}</div><div class="wd">${f.w}</div>
-      <div class="mt">${f.tip} · ${f.size.split(' · ')[0]}</div></div></div>`;
+    <div class="img"><img src="img2/${f.s}.jpg" alt="${f.n}"></div>
+    <div class="in"><div class="nm">${f.n}</div><div class="wd">«${f.w}»</div>
+      ${facts(f)}</div></div>`;
 }
 
 function banner(sub, big, done){
@@ -976,11 +1007,7 @@ $('versus').onclick=e=>{
   T.next.push(picked);
   T.idx+=2;
   setTimeout(()=>{
-    if(T.idx<T.round.length){ renderMatch(); return; }
-    if(T.next.length===1){ finishTournament(T.next[0]); return; }
-    const prev=T.round.length;
-    T.round=T.next; T.next=[]; T.idx=0;
-    banner(`${roundName(prev)} 끝`, `${roundName(T.round.length)} 진출`, renderMatch);
+    nextMatchOrRound();
   },620);
 };
 
@@ -997,9 +1024,60 @@ function finishTournament(f){
   $('d2').innerHTML=`<b>${f.n}</b>${iga(f.n)} 남았어요. 마음에 안 드시면 아래 목록에서 다시 고르셔도 돼요.`;
 }
 
+/* 둘 다 안 끌리면 — 아직 안 본 꽃(없으면 앞서 넘긴 꽃)으로 바꿔 보여 주고, 바꿀 꽃이 없으면 두 꽃을 다 빼고 다음 경기로 */
+$('skipboth').onclick=()=>{
+  const a=T.round[T.idx], b=T.round[T.idx+1];
+  if(!a||!b) return;
+  const inBracket=new Set([...T.round, ...T.next].map(f=>f.s));
+  const fresh=T.reserve.filter(f=>!inBracket.has(f.s));
+  const again=T.skipped.filter(f=>!inBracket.has(f.s));
+  const take=fresh.concat(again).slice(0,2);
+  T.skipped.push(a,b);
+  if(take.length===2){
+    T.reserve=T.reserve.filter(f=>!take.includes(f));
+    T.skipped=T.skipped.filter(f=>!take.includes(f));
+    T.round[T.idx]=take[0]; T.round[T.idx+1]=take[1];
+    renderMatch();
+    toast(fresh.length>=2?'다른 꽃 두 가지를 가져왔어요':'앞에서 넘긴 꽃을 다시 보여 드릴게요');
+    return;
+  }
+  T.round.splice(T.idx,2);
+  toast('두 꽃을 빼고 넘어갈게요');
+  nextMatchOrRound();
+};
+
 $('tolist').onclick=()=>{ S.mode='list'; $('tourney').hidden=true; $('listmode').hidden=false; drawFlowers(); };
 $('totourney').onclick=()=>{ S.mode='tour'; $('listmode').hidden=true; $('tourney').hidden=false;
   hideFrom(3); startTournament(poolFor()); goTo($('s2')); };
+
+/* ===== 목업: 꽃 카드에 고르는 데 필요한 것만 (꽃말 · 크기 · 다루기 · 색) ===== */
+function sizeWord(f){
+  const sz=f.size.split(' · ')[0];
+  if(/^잔꽃/.test(sz)) return '자잘한 잔꽃';
+  if(/^가지/.test(sz)) return '긴 가지';
+  if(/^줄기/.test(sz)) return '긴 줄기';
+  if(/^이삭/.test(sz)) return '가늘고 긴 이삭';
+  const n=(sz.match(/[\d.]+/g)||[]).map(Number); if(!n.length) return '';
+  const mid=n.length>1?(n[0]+n[1])/2:n[0];
+  return mid<=1.5?'콩알만 해요':mid<=4?'동전만 해요':mid<=7?'달걀만 해요':mid<=10?'손바닥만 해요':mid<=14?'손바닥보다 커요':'얼굴만 해요';
+}
+const CARE_FIX={gomphrena:'말려도 색이 그대로예요',gypsophila:'향이 약간 있어 호불호가 갈려요',calla:'줄기가 잘 물러요'};
+function careKey(f){
+  if(CARE_FIX[f.s]) return CARE_FIX[f.s];
+  const m=f.care.match(/<b>(.*?)<\/b>/); return m?m[1]:f.care.replace(/<[^>]+>/g,'');
+}
+function careWarn(t){ return /조심|약해|약하|시들|떨어|무릅|가루|휘어|자라|안 필|져요|요청|진해|호불호/.test(t); }
+const MATERIAL={ruscus:'잎 소재',eucalyptus:'잎 소재',hypericum:'열매 소재',brunia:'열매 같은 소재'};
+function matTag(f){ return MATERIAL[f.s]?`<span class="mat">${MATERIAL[f.s]}</span>`:''; }
+function multiBloom(f){ return /한 대에 여러 송이/.test(f.size)?'<span>한 대에 여러 송이</span>':''; }
+function colorDots(f){
+  return f.colors.map(([n,h])=>`<i title="${n}" class="${isWarnColor(f,n)?'w':''}" style="background:${h}"></i>`).join('');
+}
+function facts(f){
+  const ck=careKey(f);
+  return `<div class="facts">${matTag(f)}<span class="sz">크기 · ${sizeWord(f)}</span>${multiBloom(f)}<span class="${careWarn(ck)?'cw':'cg'}">${ck}</span></div>
+    <div class="cols2"><em>구할 수 있는 색</em>${colorDots(f)}</div>`;
+}
 
 function tierTag(t){return '<span class="tg t'+t+'">'+TIER_LABEL[t]+'</span>';}
 
@@ -1019,9 +1097,9 @@ function drawFlowers(){
     `<div class="cand pick" data-s="${f.s}">
       <span class="badge tg t${f.tier}">${TIER_LABEL[f.tier]}</span>
       ${freshNow(f)?'':'<span class="season">지금은 조화·드라이로</span>'}
-      <div class="img"><img src="img/${f.s}.jpg" alt="${f.n}" loading="lazy"></div>
-      <div class="in"><div class="nm">${f.n}</div><div class="wd">${f.w}</div>
-      <div class="mt">${f.tip}</div></div></div>`).join('')
+      <div class="img"><img src="img2/${f.s}.jpg" alt="${f.n}" loading="lazy"></div>
+      <div class="in"><div class="nm">${f.n}</div><div class="wd">«${f.w}»</div>
+      <div class="mt2">${MATERIAL[f.s]?MATERIAL[f.s]+' · ':''}${sizeWord(f)}</div><div class="cols2 sm">${colorDots(f)}</div></div></div>`).join('')
     : `<div class="empty" style="grid-column:1/-1">이 조건에 맞는 꽃이 없네요.<br>
        위에서 「전부」를 누르시거나 촬영 시기를 바꿔보세요.</div>`;
 
